@@ -124,6 +124,15 @@ describe("aprovação da entrega", () => {
     expect(body.ledger).toHaveLength(1);
     expect(body.ledger[0]?.amount_brl).toBe(80);
   });
+
+  it("recusa chave que só tem espaço ou caractere invisível", async () => {
+    const res = await postJson(app, "/approvals", {
+      mission_id: "msn_2044",
+      approved_at: "2026-03-12T21:05:00.000Z",
+      idempotency_key: " ​ ",
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("status do provedor", () => {

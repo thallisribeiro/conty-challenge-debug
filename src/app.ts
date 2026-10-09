@@ -59,7 +59,7 @@ export function createApp(db: DatabaseSync) {
     const missionId = typeof record.mission_id === "string" ? record.mission_id : "";
     const approvedAt = typeof record.approved_at === "string" ? record.approved_at : "";
     const rawKey = typeof record.idempotency_key === "string" ? record.idempotency_key : "";
-    if (!missionId || !approvedAt || !rawKey) {
+    if (!missionId || !approvedAt || !normalizeKey(rawKey)) {
       return c.json({ error: "missão, data de aprovação e chave são obrigatórias" }, 400);
     }
     if (Number.isNaN(new Date(approvedAt).getTime())) {
