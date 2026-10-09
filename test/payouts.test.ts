@@ -96,6 +96,34 @@ describe("aprovação da entrega", () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it("aceita até 23:59:59.999 em São Paulo no dia do prazo e recusa a partir da meia-noite", async () => {
+    const last = await postJson(app, "/approvals", {
+      mission_id: "msn_1842",
+      approved_at: "2026-03-13T02:59:59.999Z",
+      idempotency_key: "pay_last_instant",
+    });
+    expect(last.status).toBe(201);
+    const fresh = setup();
+    const midnight = await postJson(fresh, "/approvals", {
+      mission_id: "msn_1842",
+      approved_at: "2026-03-13T03:00:00.000Z",
+      idempotency_key: "pay_midnight",
+    });
+    expect(midnight.status).toBe(409);
+  });
+
+  it("não credita de novo quando o retry traz a chave com caractere invisível (log msn_2044)", async () => {
+    const payload = { mission_id: "msn_2044", approved_at: "2026-03-12T21:05:00.000Z" };
+    const first = await postJson(app, "/approvals", { ...payload, idempotency_key: "pay_7c1" });
+    expect(first.status).toBe(201);
+    const second = await postJson(app, "/approvals", { ...payload, idempotency_key: "pay_7c1​" });
+    expect(second.status).toBe(200);
+    const mission = await app.request("/missions/msn_2044");
+    const body = (await mission.json()) as { ledger: Array<{ amount_brl: number }> };
+    expect(body.ledger).toHaveLength(1);
+    expect(body.ledger[0]?.amount_brl).toBe(80);
+  });
 });
 
 describe("status do provedor", () => {
